@@ -17,7 +17,7 @@ https://www.dfrobot.com/product-203.html
 https://wiki.dfrobot.com/Terminal_sensor_adapter_V2_SKU_DFR0055
 
 
-## Software Calculations
+# Software Calculations
 #### Arduino Mega 
 •	10bit analog resolution (1024 different values)
 •	analog input voltage 0 - 5 V ; 0 - 5000 mV
