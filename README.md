@@ -1,5 +1,5 @@
 # Hardware
-### Arduino Mega 2560 Rev3 [info](https://store.arduino.cc/arduino-mega-2560-rev3)
+#### Arduino Mega 2560 Rev3 [info](https://store.arduino.cc/arduino-mega-2560-rev3)
 #### Gravity: Digital 10A Relay Module [info](https://www.dfrobot.com/product-1572.html)
 #### Gravity: Digital 5A Relay Module [info](https://www.dfrobot.com/product-64.html)
 #### Gravity: I2C OLED-2864 Display [info](https://www.dfrobot.com/product-1576.html)
