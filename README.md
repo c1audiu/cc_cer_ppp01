@@ -1,18 +1,13 @@
 # Hardware
-#### Gravity: Digital 10A Relay Module
-[info here](https://www.dfrobot.com/product-1572.html)
+#### Gravity: Digital 10A Relay Module [info here](https://www.dfrobot.com/product-1572.html)
 
-#### Gravity: I2C OLED-2864 Display
-[info here](https://www.dfrobot.com/product-1576.html)
+#### Gravity: I2C OLED-2864 Display [info here](https://www.dfrobot.com/product-1576.html)
 
-#### Gravity: Terminal Sensor Adapter V2.0
-[info here](https://www.dfrobot.com/product-203.html)
+#### Gravity: Terminal Sensor Adapter V2.0 [info here](https://www.dfrobot.com/product-203.html)
  
-### pressure transmitter - XMEP - 7500psi - 1/4"18NPT - 0,5..4,5V
-[info here](https://www.se.com/uk/en/product/XMEP7K5PT130/pressure-transmitter---xmep---7500psi---1-4%2218npt---0%2C5..4%2C5v---deutsch---set-1/)
+### pressure transmitter - XMEP - 7500psi - 1/4"18NPT - 0,5..4,5V [info here](https://www.se.com/uk/en/product/XMEP7K5PT130/pressure-transmitter---xmep---7500psi---1-4%2218npt---0%2C5..4%2C5v---deutsch---set-1/)
 
-### pressure transmitter - XMEP - 250bar - G1/4A male - 0,5..4,5V
-[info here](https://www.se.com/uk/en/product/XMEP250BT11F/pressure-transmitter---xmep---250bar---g1-4a-male---0%2C5..4%2C5v---deutsch---set-1/)
+### pressure transmitter - XMEP - 250bar - G1/4A male - 0,5..4,5V [info here](https://www.se.com/uk/en/product/XMEP250BT11F/pressure-transmitter---xmep---250bar---g1-4a-male---0%2C5..4%2C5v---deutsch---set-1/)
  
 # Software Calculations
 #### Arduino Mega 
