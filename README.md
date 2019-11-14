@@ -20,12 +20,12 @@
 
 #### Pressure transmitter XMEP 250 BAR
 * range 0 - 250 BAR
-* output voltage 0.5-4.5 V ; 500-4000 mV
+* output voltage 0.5-4.5 V ; 500-4500 mV
 * 4/250 = 0.016 V / BAR ; 4000/250 = 16 mV / BAR
 
 #### Pressure transmitter XMEP 7500 PSI
 * range 0 - 517 BAR
-* output voltage 0.5 - 4.5 V ; 500-4000 mV 
+* output voltage 0.5 - 4.5 V ; 500-4500 mV 
 * 4/517 = 0.0077 V / BAR ; 4000/517 = 7.7369 mV / BAR
 
 #### Flow meter UF25B
