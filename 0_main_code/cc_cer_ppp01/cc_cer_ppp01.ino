@@ -32,7 +32,7 @@ void loop() {
   else {
     unitReading1 = 0;
   }
-  
+
   //Serial.print(rawReading1); Serial.println(" ADC");
   //Serial.print(voltageReading1); Serial.println(" volts");
   //Serial.print(unitReading1); Serial.println(" L/min");
@@ -40,7 +40,12 @@ void loop() {
   // pressure transmitter XMEP250BT11F
   rawReading2 = analogRead(analogPin2);
   voltageReading2 = rawReading2 * (5.0 / 1023.0);
-  unitReading2 = voltageReading2 / 0.016; // 0.016V = 1BAR
+  if (voltageReading2 >= 0.5) {
+    unitReading2 = (voltageReading2 - 0.5) / 0.016; // 0.5V offset; 0.016V = 1BAR
+  }
+  else {
+    unitReading2 = 0;
+  }
 
   //Serial.print(rawReading2); Serial.println(" ADC");
   //Serial.print(voltage1); Serial.println(" volts");
