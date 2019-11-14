@@ -1,4 +1,4 @@
-## Hardware
+# Hardware
 #### Gravity: Digital 10A Relay Module 
 https://www.dfrobot.com/product-1572.html
 
