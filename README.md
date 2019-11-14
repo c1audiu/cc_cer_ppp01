@@ -38,3 +38,8 @@ https://wiki.dfrobot.com/Terminal_sensor_adapter_V2_SKU_DFR0055
 * output voltage ; 0 - 5000 mV 
 * 5/25 = 0.2 V / L/min ; 5000/25 = 200 mV / L/min
 
+# u8glib library
+https://github.com/olikraus/u8glib/wiki/userreference
+https://github.com/olikraus/u8glib/wiki/fontsize
+
+
