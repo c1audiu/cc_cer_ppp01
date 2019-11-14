@@ -1,6 +1,6 @@
 # Hardware
 #### Gravity: Digital 10A Relay Module
-[#### Gravity: Digital 10A Relay Module](https://www.dfrobot.com/product-1572.html)
+[info here](https://www.dfrobot.com/product-1572.html)
 
 
 #### Gravity: I2C OLED-2864 Display
