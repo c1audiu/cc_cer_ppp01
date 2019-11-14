@@ -1,6 +1,8 @@
 # Hardware
 #### Gravity: Digital 10A Relay Module [info here](https://www.dfrobot.com/product-1572.html)
 
+### Gravity: Digital 5A Relay Module [info here](https://www.dfrobot.com/product-64.html)
+
 #### Gravity: I2C OLED-2864 Display [info here](https://www.dfrobot.com/product-1576.html)
 
 #### Gravity: Terminal Sensor Adapter V2.0 [info here](https://www.dfrobot.com/product-203.html)
