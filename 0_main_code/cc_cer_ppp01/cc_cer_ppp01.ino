@@ -25,9 +25,9 @@ void setup() {
 void loop() {
   // flow meter UF25B
   rawReading1 = analogRead(analogPin1);
-  voltageReading1 = rawReading1 * (5.0 / 1023.0);
-  if (voltageReading1 >= 0.2) {
-    unitReading1 = (voltageReading1 - 0.2) / 0.2; // 0.2V offset; 0.2V = 1L/min
+  voltageReading1 = rawReading1 * (5000 / 1024.0);
+  if (voltageReading1 >= 200) {
+    unitReading1 = (voltageReading1 - 200) / 200; // 200mV offset; 200mV = 1L/min
   }
   else {
     unitReading1 = 0;
@@ -39,9 +39,9 @@ void loop() {
 
   // pressure transmitter XMEP250BT11F
   rawReading2 = analogRead(analogPin2);
-  voltageReading2 = rawReading2 * (5.0 / 1023.0);
-  if (voltageReading2 >= 0.5) {
-    unitReading2 = (voltageReading2 - 0.5) / 0.016; // 0.5V offset; 0.016V = 1BAR
+  voltageReading2 = rawReading2 * (5000 / 1024.0);
+  if (voltageReading2 >= 500) {
+    unitReading2 = (voltageReading2 - 500) / 16; // 500mV offset; 16mV = 1BAR
   }
   else {
     unitReading2 = 0;
