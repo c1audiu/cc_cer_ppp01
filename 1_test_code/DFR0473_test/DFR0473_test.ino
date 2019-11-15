@@ -8,8 +8,5 @@ void setup() {
 
 void loop() {
   digitalWrite(relayPin1, HIGH);   //Turn on relay
-  //delay(1000);
-  
   //digitalWrite(relayPin1, LOW);   //Turn off relay
-  //delay(1000);
 }
