@@ -1,4 +1,5 @@
 // Gravity: Analog Voltage Divider V2 test
+
 const int analogPin1 = A6;
 int rawReading1 = 0;
 float voltageReading1 = 0;

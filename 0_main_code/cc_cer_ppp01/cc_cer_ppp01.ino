@@ -20,15 +20,26 @@ int rawReading3 = 0;
 //int voltageReading3 = 0;
 int unitReading3 = 0;
 
+// relay 1
+const int relayPin1 = 9;
+
+// debug
+char *stateRelay[] = {"On", "Off"};
+
 void setup() {
+  // serial debug
   Serial.begin(9600);
 
   // display DFR0486
-  // u8g.setRot180();  // flip screen
+  //u8g.setRot180();  // flip screen
+
+  // relay 1
+  pinMode(relayPin1, OUTPUT);
 
 }
 
 void loop() {
+
   // flow meter UF25B 1
   rawReading1 = analogRead(analogPin1);
   voltageReading1 = rawReading1 * (5000 / 1024.0);
@@ -54,6 +65,16 @@ void loop() {
   //voltageReading3 = rawReading3 * (5000 / 1024.0);
   unitReading3 = rawReading3 / 40.4; // <- calibrated value; calculated value -> 1024/25V = 40.96
 
+  // close relay if the voltage is bellow 12V
+  if (unitReading3 >= 12) {
+    digitalWrite(relayPin1, HIGH);   //Turn on relay
+    //Serial.print(stateRelay[0]);
+  }
+  else {
+    digitalWrite(relayPin1, LOW);   //Turn off relay
+    //Serial.print(stateRelay[1]);
+  }
+
   // debug to serial
   //Serial.print(rawReading1); Serial.println(" ADC");
   //Serial.print(voltageReading1); Serial.println(" volts");
@@ -70,15 +91,23 @@ void loop() {
   // debug to display
   u8g.firstPage();
   do {
-    u8g.setFont(u8g_font_fur11);
-    u8g.drawStr( 0, 20, "L/min");
-    u8g.setPrintPos(64, 20);
+    u8g.setFont(u8g_font_unifont);
+    u8g.drawStr( 0, 12, "L/min");
+    u8g.setPrintPos(75, 12);
     u8g.print(unitReading1);
-    u8g.drawStr( 0, 40, "BAR");
-    u8g.setPrintPos(64, 40);
+    u8g.drawStr( 0, 26, "BAR");
+    u8g.setPrintPos(75, 26);
     u8g.print(unitReading2);
-    u8g.drawStr( 0, 60, "Voltage");
-    u8g.setPrintPos(64, 60);
+    u8g.drawStr( 0, 40, "Voltage");
+    u8g.setPrintPos(75, 40);
     u8g.print(unitReading3);
+    u8g.drawStr( 0, 54, "Relay");
+    u8g.setPrintPos(75, 54);
+    if (unitReading3 >= 12) {
+      u8g.print(stateRelay[0]);
+    }
+    else {
+      u8g.print(stateRelay[1]);
+    }
   } while ( u8g.nextPage() );
 }
