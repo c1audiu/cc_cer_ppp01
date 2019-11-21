@@ -23,18 +23,21 @@ Button button2 = (digitalPin2);
 // logic
 int currentMenuSelection = 0;
 int previousMenuSelection = 0;
+int menuSelection = 0;
+int currentReadingDisplay = 0;
+int previousReadingDisplay = 0;
 int limitHV = 0;
 int limitLV = 0;
 int limitVoltage = 10; // limit for voltage read from external relay
 float limitFlow = 0.0;
+int pressureFlag = 0;
+int triggerFlag = 0;
+int flowFlag = 0;
 int monitFlag = 0;
-int limitFlag = 0;
-int menuSelection = 0;
-int currentReadingDisplay = 0;
-int previousReadingDisplay = 0;
-unsigned long startMillis;
-unsigned long currentMillis;
-const unsigned long period = 2000;
+unsigned long startMillis = millis();
+unsigned long currentMillis = 0;
+unsigned long triggerMillis = 0;
+const unsigned long skipMillis = 2000; // skip time for pressure monit
 
 // flow meter UF25B 1
 const int analogPin3 = A8;
@@ -69,6 +72,17 @@ void flowRead() {
   }
 }
 
+void flowMonit() {
+  flowRead();
+
+  if (unitReading3 <= limitFlow) {
+    flowFlag = 1; // limit is OK
+  }
+  else {
+    flowFlag = 2; // limit is NOK
+  }
+}
+
 void pressureRead() {
   // pressure transmitter XMEP250BT11F 1
   rawReading4 = analogRead(analogPin4);
@@ -85,44 +99,50 @@ void pressureLimit() {
   lcdMenu();
   pressureRead();
   if (limitLV <= round(unitReading4) && round(unitReading4) <= limitHV) {
-    limitFlag = 11; // limits are OK
+    pressureFlag = 1; // limits are OK
   }
   else {
-    limitFlag = 12; // limits are NOK
+    pressureFlag = 2; // limits are NOK
   }
 }
 
 void pressureMonit() {
   pressureLimit();
-  triggerRead();
-  currentMillis = millis();
-
-  if (limitVoltage < unitReading5) { // monit trigger
-
-    if (currentMillis - startMillis >= period && limitFlag == 11) {
-      monitFlag = 31; // trigger ON; wait OK; limits OK;
-      startMillis = currentMillis;
-    }
-    else if  (currentMillis - startMillis >= period && limitFlag == 12) {
-      monitFlag = 12; // trigger ON; wait OK; limits NOK;
-      startMillis = currentMillis;
-    }
-    else {
-      monitFlag = 11; // trigger ON;
-    }
-    //startMillis = currentMillis;
+  triggerMonit();
+  if (triggerFlag == 1 && pressureFlag == 1) {
+    monitFlag = 1; // pressure is OK
+  }
+  else if (triggerFlag == 1 && pressureFlag == 2) {
+    monitFlag = 2; // pressure is NOK
   }
   else {
-    monitFlag = 32; // trigger OFF;
+    monitFlag = 3; // don't care
   }
 }
-
 
 void triggerRead() {
   // voltage divider 1
   rawReading5 = analogRead(analogPin5);
   //voltageReading5 = rawReading5 * (5000 / 1024.0);
   unitReading5 = rawReading5 / 40.4; // <- calibrated value; calculated value -> 1024/25V = 40.96
+}
+
+void triggerMonit() {
+  triggerRead();
+  if (limitVoltage < unitReading5) {
+    currentMillis = millis();
+    triggerMillis = currentMillis - startMillis;
+    if (triggerMillis >= skipMillis) {
+      triggerFlag = 1; // the pressure can be monitored
+    }
+    else {
+      triggerFlag = 2; // to early to start the pressure monitor
+    }
+  }
+  else {
+    startMillis = millis();
+    triggerFlag = 0;
+  }
 }
 
 void lcdMenu() {
@@ -250,55 +270,33 @@ void setup() {
 
   // relay 1
   pinMode(relayPin1, OUTPUT);
-
-  // logic
-  startMillis = millis();
 }
 
 void loop() {
-  pressureMonit();
   lcdMenu();
+  flowMonit();
+  pressureMonit();
 
-  if (!digitalReading2) { // monitor button
-    if (monitFlag > 30 && unitReading3 >= limitFlow ) { // Monitor On; Limits OK; Trigger On;
-      digitalWrite(relayPin1, HIGH);   //Turn on relay
-
-      // debug
-      Serial.println("Monitor On; Trigger On; Limits OK");
-      //Serial.print(limitLV); Serial.print(";"); Serial.print(round(unitReading4)); Serial.print(";"); Serial.println(limitHV);
-      //Serial.print(unitReading3); Serial.print(">="); Serial.println(limitFlow);
-      Serial.print(limitLV); Serial.print("<="); Serial.print(round(unitReading4)); Serial.print("<="); Serial.println(limitHV);
-      Serial.println(monitFlag);
-      Serial.println(limitFlag);
-
+  if (!digitalReading2) { // monitor ON
+    if (monitFlag == 1 && flowFlag == 1) {
+      digitalWrite(relayPin1, HIGH);   // Turn on relay
     }
-    else if (monitFlag > 20 && unitReading3 >= limitFlow ) { // Monitor On; Limits OK; Trigger Off;
-      digitalWrite(relayPin1, HIGH);   //Turn on relay
-
-      // debug
-      Serial.println("Monitor On; Trigger Off; Limits OK");
-      //Serial.print(limitLV); Serial.print(";"); Serial.print(round(unitReading4)); Serial.print(";"); Serial.println(limitHV);
-      //Serial.print(unitReading3); Serial.print(">="); Serial.println(limitFlow);
-      Serial.print(limitLV); Serial.print("<="); Serial.print(round(unitReading4)); Serial.print("<="); Serial.println(limitHV);
-      Serial.println(monitFlag);
-      Serial.println(limitFlag);
+    else if (monitFlag == 3 && flowFlag == 1) {
+      digitalWrite(relayPin1, HIGH);   // Turn on relay
     }
-    else { // Monitor On; Limits NOK;
-      digitalWrite(relayPin1, LOW);   //Turn off relay
-
-      // debug
-      Serial.println("Monitor On; Limits NOK");
-      //Serial.print(limitLV); Serial.print(";"); Serial.print(round(unitReading4)); Serial.print(";"); Serial.println(limitHV);
-      //Serial.print(unitReading3); Serial.print(">="); Serial.println(limitFlow);
-      Serial.print(limitLV); Serial.print("<="); Serial.print(round(unitReading4)); Serial.print("<="); Serial.println(limitHV);
-      Serial.println(monitFlag);
-      Serial.println(limitFlag);
+    else {
+      digitalWrite(relayPin1, LOW);   // Turn off relay
     }
   }
-  else {
-    digitalWrite(relayPin1, HIGH);   //Turn on relay
-
-    // debug
-    Serial.println("Monit Off");
+  else { // monitor OFF
+    digitalWrite(relayPin1, HIGH);   // Turn on relay
   }
+
+  // debug
+  //Serial.print(unitReading3); Serial.print(">="); Serial.println(limitFlow);
+  Serial.print(limitLV); Serial.print("<="); Serial.print(round(unitReading4)); Serial.print("<="); Serial.println(limitHV);
+  //Serial.println(pressureFlag);
+  //Serial.println(flowFlag);
+  //Serial.println(monitFlag);
+
 }
