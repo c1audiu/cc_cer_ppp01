@@ -29,8 +29,14 @@
 * output voltage ; 0 - 5000 mV 
 * 5/25 = 0.2 V / L/min ; 5000/25 = 200 mV / L/min
 
-# u8glib library
-* https://github.com/olikraus/u8glib/wiki/userreference
-* https://github.com/olikraus/u8glib/wiki/fontsize
+# Connections
+* rotation sensor for menu selection -> Arduino Analog Pin 6 
+* rotation sensor for pressure limit selection -> Arduino Analog Pin 7
+* push button for pressure limit set -> Arduino Digital Pin 41
+* toggle switch for monitor on/off -> Arduino Digital Pin 42
+* pressure sensor 1 -> Arduino Analog Pin 9
+* flow sensor 1 -> Arduino Analog Pin 8
+* voltage sensor 1 (trigger detection) -> Arduino Analog Pin 10
+* relay 1 - > Arduino Digital Pin 43
 
 
