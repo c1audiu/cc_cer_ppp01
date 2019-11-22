@@ -39,3 +39,7 @@
 * Digital Pin 41 -> push button (set pressure limit)  
 * Digital Pin 42 -> toggle switch (monitor on/off) 
 * Digital Pin 43 -> relay 1
+
+# Video Demo
+[>info](https://photos.app.goo.gl/tFMy3HdtMLbQh9Dq5)
+
