@@ -8,6 +8,8 @@ const int analogPin1 = A6;
 const int analogPin2 = A7;
 int rawReading1 = 0;
 int rawReading2 = 0;
+int voltageReading2 = 0;
+int unitReading2 = 0;
 
 // push buttons
 #include <Button.h>
@@ -15,10 +17,10 @@ const int digitalPin1 = 41;
 const int digitalPin2 = 42;
 bool digitalReading1 = 0;
 bool digitalReading2 = 0;
-int currentButtonState = 0;
-int previousButtonState = 0;
-Button button1 = (digitalPin1);
-Button button2 = (digitalPin2);
+//int currentButtonState = 0;
+//int previousButtonState = 0;
+Button button1 = (digitalPin1); // limit button
+Button button2 = (digitalPin2); // monit button
 
 // logic
 int currentMenuSelection = 0;
@@ -28,12 +30,14 @@ int currentReadingDisplay = 0;
 int previousReadingDisplay = 0;
 int limitHV = 0;
 int limitLV = 0;
-int limitVoltage = 10; // limit for voltage read from external relay
+int limitVoltage = 3; // limit for voltage read from external relay
 float limitFlow = 0.0;
 int pressureFlag = 0;
 int triggerFlag = 0;
 int flowFlag = 0;
 int monitFlag = 0;
+int statusFlag = 0;
+int errorFlag = 0;
 unsigned long startMillis = millis();
 unsigned long currentMillis = 0;
 unsigned long triggerMillis = 0;
@@ -58,7 +62,7 @@ int rawReading5 = 0;
 int unitReading5 = 0; // max 25V
 
 // relay 1
-const int relayPin1 = 9;
+const int relayPin1 = 43;
 
 void flowRead() {
   // flow meter UF25B 1
@@ -145,17 +149,59 @@ void triggerMonit() {
   }
 }
 
+void statusMonit() {
+  flowMonit();
+  pressureMonit();
+
+  if (!digitalReading2) { // monitor ON
+    if (monitFlag == 1 && flowFlag == 1) {
+      statusFlag = 1;   // Turn on relay
+    }
+    else if (monitFlag == 3 && flowFlag == 1) {
+      statusFlag = 2;    // Turn on relay
+    }
+    else {
+      statusFlag = 3;   // Turn off relay
+    }
+  }
+  else { // monitor OFF
+    statusFlag = 4;    // Turn on relay
+  }
+}
+
+void errorMonit() {
+  statusMonit();
+  if (statusFlag == 3) {
+    errorFlag = 1;
+  }
+  else if (errorFlag == 1 && digitalReading2 == 1){
+    errorFlag = 0;
+  }
+}
+
+void inputMenu() {
+  // rotation sensor 1
+  rawReading1 = analogRead(analogPin1);
+  menuSelection = rawReading1 / 204.8; // 1024 / menu items
+
+  // rotation sensor 2
+  rawReading2 = analogRead(analogPin2);
+  voltageReading2 = rawReading2 * (5000 / 1024);
+  if (voltageReading2 >= 500) {
+    unitReading2 = (voltageReading2 - 500) / 16; // calculated value -> 500mV offset; 16mV = 1BAR
+  }
+  else {
+    unitReading2 = 0;
+  }
+
+  // push button 2
+  digitalReading2 = digitalRead(digitalPin2);
+}
+
 void lcdMenu() {
+  inputMenu();
   flowRead();
   pressureRead();
-  //pressureMonit();
-
-  // rotation sensor
-  rawReading1 = analogRead(analogPin1);
-  rawReading2 = analogRead(analogPin2);
-
-  // push button
-  digitalReading2 = digitalRead(digitalPin2);
 
   // i2c lcd
   lcd.setRGB(255, 255, 255);
@@ -168,8 +214,6 @@ void lcdMenu() {
   if (currentMenuSelection != previousMenuSelection) {
     lcd.clear();
   }
-
-  menuSelection = rawReading1 / 204.8; // 1024 / menu items
 
   switch (currentMenuSelection) {
     case 1:
@@ -211,12 +255,12 @@ void lcdMenu() {
       lcd.setCursor(10, 0);
       lcd.print(limitLV);
       if (button1.pressed()) {
-        limitLV = rawReading2;
+        limitLV = unitReading2;
       }
       lcd.setCursor(0, 1);
       lcd.print("New Limit");
       lcd.setCursor(10, 1);
-      lcd.print(rawReading2);
+      lcd.print(unitReading2);
       break;
 
     case 4:
@@ -230,12 +274,12 @@ void lcdMenu() {
       lcd.setCursor(10, 0);
       lcd.print(limitHV);
       if (button1.pressed()) {
-        limitHV = rawReading2;
+        limitHV = unitReading2;
       }
       lcd.setCursor(0, 1);
       lcd.print("New Limit");
       lcd.setCursor(10, 1);
-      lcd.print(rawReading2);
+      lcd.print(unitReading2);
       break;
 
     default:
@@ -274,29 +318,24 @@ void setup() {
 
 void loop() {
   lcdMenu();
-  flowMonit();
-  pressureMonit();
+  //flowMonit();
+  //pressureMonit();
+  //statusMonit();
+  errorMonit();
 
-  if (!digitalReading2) { // monitor ON
-    if (monitFlag == 1 && flowFlag == 1) {
-      digitalWrite(relayPin1, HIGH);   // Turn on relay
-    }
-    else if (monitFlag == 3 && flowFlag == 1) {
-      digitalWrite(relayPin1, HIGH);   // Turn on relay
-    }
-    else {
-      digitalWrite(relayPin1, LOW);   // Turn off relay
-    }
-  }
-  else { // monitor OFF
+  if (errorFlag != 1) {
     digitalWrite(relayPin1, HIGH);   // Turn on relay
+  }
+  else {
+    digitalWrite(relayPin1, LOW);   // Turn off relay
   }
 
   // debug
   //Serial.print(unitReading3); Serial.print(">="); Serial.println(limitFlow);
-  Serial.print(limitLV); Serial.print("<="); Serial.print(round(unitReading4)); Serial.print("<="); Serial.println(limitHV);
+  //Serial.print(limitLV); Serial.print("<="); Serial.print(round(unitReading4)); Serial.print("<="); Serial.println(limitHV);
   //Serial.println(pressureFlag);
   //Serial.println(flowFlag);
   //Serial.println(monitFlag);
+  Serial.println(errorFlag);
 
 }
