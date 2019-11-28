@@ -59,31 +59,6 @@ unsigned long currentMillis = 0; // used for calculating the skip time for press
 unsigned long triggerMillis = 0; // used for calculating the skip time for pressure monit
 const unsigned long skipMillis = 2000; // skip time for pressure monit
 
-void triggerRead() {
-  // voltage divider 1
-  rawTrigger1 = analogRead(pinTrigger1);
-  //voltageReading5 = rawTrigger1 * (5000 / 1024.0);
-  unitTrigger1 = rawTrigger1 / 40.4; // <- calibrated value; calculated value -> 1024/25V = 40.96
-}
-
-void triggerMonit() {
-  triggerRead();
-  if (limitVoltage < unitTrigger1) {
-    currentMillis = millis();
-    triggerMillis = currentMillis - startMillis;
-    if (triggerMillis >= skipMillis) {
-      triggerFlag = 1; // trigger on, the limits can be monitored
-    }
-    else {
-      triggerFlag = 2; // trigger on, to early to start the limits monitor
-    }
-  }
-  else {
-    startMillis = millis();
-    triggerFlag = 0;
-  }
-}
-
 void flowRead() {
   // flow meter UF25B 1
   rawFlowSensor1 = analogRead(pinFlowSensor1);
@@ -132,49 +107,69 @@ void pressureLimit() {
 }
 
 void pressureMonit() {
-  triggerMonit();
-  flowMonit();
   pressureLimit();
-
-  if (triggerFlag == 1) { // trigger on;
-    if (flowFlag == 1 && pressureFlag == 1) {
-      monitFlag = 1; // limits ok
-    }
-    else if (flowFlag == 1 && pressureFlag == 2) {
-      monitFlag = 2; // flow ok, pressure nok
-    }
-    else {
-      monitFlag = 3; // flow nok, pressure ok
-    }
+  triggerMonit();
+  
+  if (triggerFlag == 1 && pressureFlag == 1) {
+    monitFlag = 1; // trigger on; the limits can be monitored; limits ok
   }
-
+  else if (triggerFlag == 1 && pressureFlag == 2) {
+    monitFlag = 2; // trigger on; the limits can be monitored; limits nok
+  }
   else {
-    monitFlag = 4; // monitor off or/and trigger off
+    monitFlag = 3; // monitor off or/and trigger off
   }
 }
 
+void triggerRead() {
+  // voltage divider 1
+  rawTrigger1 = analogRead(pinTrigger1);
+  //voltageReading5 = rawTrigger1 * (5000 / 1024.0);
+  unitTrigger1 = rawTrigger1 / 40.4; // <- calibrated value; calculated value -> 1024/25V = 40.96
+}
+
+void triggerMonit() {
+  triggerRead();
+  if (limitVoltage < unitTrigger1) {
+    currentMillis = millis();
+    triggerMillis = currentMillis - startMillis;
+    if (triggerMillis >= skipMillis) {
+      triggerFlag = 1; // trigger on, the limits can be monitored
+    }
+    else {
+      triggerFlag = 2; // trigger on, to early to start the limits monitor
+    }
+  }
+  else {
+    startMillis = millis();
+    triggerFlag = 0;
+  }
+}
 
 void statusMonit() {
   flowMonit();
   pressureMonit();
 
-  if (!buttonMonitor) {
-    if (monitFlag == 1) { // limits ok
-      statusFlag = 1;   // turn on relay
+  if (!buttonMonitor) { // monitor ON
+    if (monitFlag == 1 && flowFlag == 1) {
+      statusFlag = 1;   // Turn on relay
     }
-    else { // limits nok
-      statusFlag = 2;   // turn off relay
+    else if (monitFlag == 3 && flowFlag == 1) {
+      statusFlag = 2;    // Turn on relay
+    }
+    else {
+      statusFlag = 3;   // Turn off relay
     }
   }
-  else { // monitor off or/and trigger off
-    statusFlag = 3;    // turn on relay
+  else { // monitor OFF
+    statusFlag = 4;    // Turn on relay
   }
 }
 
 void errorMonit() {
   statusMonit();
 
-  if (statusFlag == 2) {
+  if (statusFlag == 3) { 
     errorFlag = 1; // flag to stop the monitor if error occurs
   }
   else if (errorFlag == 1 && buttonMonitor) { // reset error flag with monitor switch
