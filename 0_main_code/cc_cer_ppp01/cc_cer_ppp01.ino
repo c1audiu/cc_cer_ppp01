@@ -1,7 +1,36 @@
+/*
+  Flag explaination
+  
+  triggerFlag = 1; // trigger on, settling time passed, the limits can be monitored
+  triggerFlag = 2; // trigger on, to early to start the limits monitor
+
+  flowFlag = 1; // flow limit ok
+  flowFlag = 2; // flow limit nok
+
+  pressureFlag = 1; // pressure limits ok
+  pressureFlag = 2; // pressure limits nok
+
+  monitFlag = 1; // trigger on, flow limit ok, pressure ok
+  monitFlag = 2; // trigger on, flow limit ok, pressure nok
+  monitFlag = 3; // trigger on, flow nok
+  monitFlag = 4; // trigger off
+
+  relayFlag = 1; // relay on
+  relayFlag = 2; // relay off
+
+  errorFlag = 1; // flag to stop and wait if error occurs
+*/
+
 // lcd
 #include <Wire.h>
 #include <DFRobot_RGBLCD.h>
 DFRobot_RGBLCD lcd(16, 2);
+
+// sd
+#include <SPI.h>
+#include <SD.h>
+File sdLimitLow1;
+File sdLimitHigh1;
 
 // switches
 #include <Button.h>
@@ -9,7 +38,7 @@ const int pinSwitchSet = 41; // push switch for setting the pressure limits
 Button buttonSet = (pinSwitchSet);
 
 const int pinSwitchMonitor = 42; // push switch for changing between monitor on (read, compare with limits and to the logic) and monitor off (just read the values)
-bool buttonMonitor = 0;
+int buttonMonitor = 0;
 
 const int pinSwitchMenu = A6; // rotary switch for menu navigation
 int rawSwitchMenu = 0; // raw reading
@@ -44,15 +73,15 @@ int currentMenuSelection = 0; // used for lcd refresh
 int previousMenuSelection = 0; // used for lcd refresh
 int currentReadingDisplay = 0; // used for lcd refresh
 int previousReadingDisplay = 0; // used for lcd refresh
-int limitHV = 0; // higher limit for pressure
-int limitLV = 0; // lower limit for pressure
+int limitHigh = 0; // higher limit for pressure
+int limitLow = 0; // lower limit for pressure
 int limitVoltage = 3; // limit for voltage received from timed relay
 float limitFlow = 0.0; // limit for water flow
 int pressureFlag = 0;
 int triggerFlag = 0;
 int flowFlag = 0;
 int monitFlag = 0;
-int statusFlag = 0;
+int relayFlag = 0;
 int errorFlag = 0;
 unsigned long startMillis = millis(); // used for calculating the skip time for pressure monit
 unsigned long currentMillis = 0; // used for calculating the skip time for pressure monit
@@ -72,7 +101,7 @@ void triggerMonit() {
     currentMillis = millis();
     triggerMillis = currentMillis - startMillis;
     if (triggerMillis >= skipMillis) {
-      triggerFlag = 1; // trigger on, the limits can be monitored
+      triggerFlag = 1; // trigger on, settling time passed, the limits can be monitored
     }
     else {
       triggerFlag = 2; // trigger on, to early to start the limits monitor
@@ -84,7 +113,7 @@ void triggerMonit() {
   }
 }
 
-void flowRead() {
+void flowRead1() {
   // flow meter UF25B 1
   rawFlowSensor1 = analogRead(pinFlowSensor1);
   voltageFlowSensor1 = rawFlowSensor1 * (5000 / 1024.0);
@@ -97,7 +126,7 @@ void flowRead() {
 }
 
 void flowMonit() {
-  flowRead();
+  flowRead1();
 
   // flow meter UF25B 1
   if (unitFlowSensor1 <= limitFlow) {
@@ -108,7 +137,7 @@ void flowMonit() {
   }
 }
 
-void pressureRead() {
+void pressureRead1() {
   // pressure transmitter XMEP250BT11F 1
   rawPressureSensor1 = analogRead(pinPressureSensor1);
   voltagePressureSensor1 = rawPressureSensor1 * (5000 / 1024.0);
@@ -122,8 +151,8 @@ void pressureRead() {
 
 void pressureLimit() {
   lcdMenu();
-  pressureRead();
-  if (limitLV <= round(unitPressureSensor1) && round(unitPressureSensor1) <= limitHV) {
+  pressureRead1();
+  if (limitLow <= round(unitPressureSensor1) && round(unitPressureSensor1) <= limitHigh) {
     pressureFlag = 1; // pressure limits ok
   }
   else {
@@ -136,58 +165,59 @@ void pressureMonit() {
   flowMonit();
   pressureLimit();
 
-  if (triggerFlag == 1) { // trigger on;
-    if (flowFlag == 1 && pressureFlag == 1) {
-      monitFlag = 1; // limits ok
-    }
-    else if (flowFlag == 1 && pressureFlag == 2) {
-      monitFlag = 2; // flow ok, pressure nok
+  if (triggerFlag == 1) { // trigger on, settling time passed, the limits can be monitored
+    if (flowFlag == 1) {
+      if  (pressureFlag == 1) {
+        monitFlag = 1; // trigger on, flow limit ok, pressure ok
+      }
+      else {
+        monitFlag = 2; // trigger on, flow limit ok, pressure nok
+      }
     }
     else {
-      monitFlag = 3; // flow nok, pressure ok
+      monitFlag = 3; // trigger on, flow nok
     }
   }
-
   else {
-    monitFlag = 4; // monitor off or/and trigger off
+    monitFlag = 4; // trigger off
   }
 }
 
-
-void statusMonit() {
+void relayMonit() {
+  inputMenu();
   flowMonit();
   pressureMonit();
 
-  if (!buttonMonitor) {
-    if (monitFlag == 1) { // limits ok
-      statusFlag = 1;   // turn on relay
+  if (buttonMonitor == 0) { // monitor button is on
+    if (monitFlag == 1 || monitFlag == 4) {
+      relayFlag = 1 ; // relay on
     }
     else { // limits nok
-      statusFlag = 2;   // turn off relay
+      relayFlag = 2; // relay off
     }
   }
-  else { // monitor off or/and trigger off
-    statusFlag = 3;    // turn on relay
+  else { // monitor button is off
+    relayFlag = 1; // relay on
   }
 }
 
-void errorMonit() {
-  statusMonit();
+void errorMonit() { // function to block the relay if flow or pressure is nok
+  relayMonit();
 
-  if (statusFlag == 2) {
+  if (relayFlag == 2) {
     errorFlag = 1; // flag to stop the monitor if error occurs
   }
-  else if (errorFlag == 1 && buttonMonitor) { // reset error flag with monitor switch
+  else if (errorFlag == 1 && buttonMonitor == 1) { // reset error flag with monitor switch off
     errorFlag = 0;
   }
 }
 
 void inputMenu() {
-  // rotary switch 1
+  // rotary switch for Menu selection
   rawSwitchMenu = analogRead(pinSwitchMenu);
   menuSelection = rawSwitchMenu / 204.8; // 1024/5 menu items
 
-  // rotary switch 2
+  // rotary switch for setting the pressure limits
   rawSwitchLimit = analogRead(pinSwitchLimit);
   voltageSwitchLimit = rawSwitchLimit * (5000 / 1024);
   if (voltageSwitchLimit >= 500) {
@@ -203,8 +233,8 @@ void inputMenu() {
 
 void lcdMenu() {
   inputMenu();
-  flowRead();
-  pressureRead();
+  flowRead1();
+  pressureRead1();
 
   // i2c lcd
   lcd.setRGB(255, 255, 255);
@@ -258,9 +288,18 @@ void lcdMenu() {
       lcd.setCursor(0, 0);
       lcd.print("Limit LV");
       lcd.setCursor(10, 0);
-      lcd.print(limitLV);
+      lcd.print(limitLow);
       if (buttonSet.pressed()) {
-        limitLV = unitSwitchLimit;
+        if (SD.exists("limitLow1.txt")) {
+          SD.remove("limitLow1.txt");
+        }
+        else {
+          sdLimitLow1 = SD.open("limitLow1.txt", FILE_WRITE);
+          if (sdLimitLow1) {
+            sdLimitLow1.println(unitSwitchLimit);
+            sdLimitLow1.close();
+          }
+        }
       }
       lcd.setCursor(0, 1);
       lcd.print("New Limit");
@@ -277,9 +316,18 @@ void lcdMenu() {
       lcd.setCursor(0, 0);
       lcd.print("Limit HV");
       lcd.setCursor(10, 0);
-      lcd.print(limitHV);
+      lcd.print(limitHigh);
       if (buttonSet.pressed()) {
-        limitHV = unitSwitchLimit;
+        if (SD.exists("limitHigh1.txt")) {
+          SD.remove("limitHigh1.txt");
+        }
+        else {
+          sdLimitHigh1 = SD.open("limitHigh1.txt", FILE_WRITE);
+          if (sdLimitHigh1) {
+            sdLimitHigh1.println(unitSwitchLimit);
+            sdLimitHigh1.close();
+          }
+        }
       }
       lcd.setCursor(0, 1);
       lcd.print("New Limit");
@@ -290,7 +338,7 @@ void lcdMenu() {
     default: // show monitor state and status code
       lcd.setCursor(0, 0);
       lcd.print("Monitor  ->");
-      if (buttonMonitor) {
+      if (buttonMonitor == 1) {
         lcd.setCursor(13, 0);
         lcd.print("Off");
       }
@@ -313,8 +361,12 @@ void setup() {
   // lcd
   lcd.init();
 
+  // sd
+  SD.begin(53);
+
   // switches
   buttonSet.begin();
+  pinMode(pinSwitchMonitor, INPUT);
 
   // relays
   pinMode(pinRelayWater1, OUTPUT);
@@ -325,20 +377,23 @@ void loop() {
   lcdMenu();
   errorMonit();
 
-  if (errorFlag != 1) {
-    digitalWrite(pinRelayWater1, HIGH);   // switch on relay
+  if (errorFlag == 0) { // switch on relays
+    digitalWrite(pinRelayWater1, HIGH);
     digitalWrite(pinRelayPower1, HIGH);
   }
-  else {
-    digitalWrite(pinRelayWater1, LOW);   // switch off relay
+  else { // switch off relays
+    digitalWrite(pinRelayWater1, LOW);
     digitalWrite(pinRelayPower1, LOW);
   }
 
   // debug
   //Serial.print(unitFlowSensor1); Serial.print(">="); Serial.println(limitFlow);
-  //Serial.print(limitLV); Serial.print("<="); Serial.print(round(unitPressureSensor1)); Serial.print("<="); Serial.println(limitHV);
-  //Serial.println(pressureFlag);
-  //Serial.println(flowFlag);
-  //Serial.println(monitFlag);
-  //Serial.println(errorFlag);
+  //Serial.print(limitLow); Serial.print("<="); Serial.print(round(unitPressureSensor1)); Serial.print("<="); Serial.println(limitHigh);
+  //Serial.print("triggerFlag == "); Serial.println(triggerFlag);
+  //Serial.print("buttonMonitor == "); Serial.println(buttonMonitor);
+  //Serial.print("pressureFlag == "); Serial.println(pressureFlag);
+  //Serial.print("flowFlag == "); Serial.println(flowFlag);
+  //Serial.print("monitFlag == "); Serial.println(monitFlag);
+  //Serial.print("errorFlag == "); Serial.println(errorFlag);
+  //Serial.print("relayFlag == "); Serial.println(triggerFlag);
 }

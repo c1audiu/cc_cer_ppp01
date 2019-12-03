@@ -1,8 +1,12 @@
+// read data from rotary switch and when the button switch is pressed save it to SD card.
+// read the data from the SD card in to a variable.
+
 // sd
 #include <SPI.h>
 #include <SD.h>
-
-File myFile;
+File sdLowIn1;
+File sdLowOut1;
+int LimitLow1 = 0;
 
 // switches
 #include <Button.h>
@@ -14,7 +18,7 @@ int rawSwitchLimit = 0; // raw reading
 int voltageSwitchLimit = 0; // voltage conversion
 int unitSwitchLimit = 0;  // measurement unit conversion [BAR]
 
-void setRead() {
+void inputMenu() {
   // rotary switch for setting the pressure limits
   rawSwitchLimit = analogRead(pinSwitchLimit);
   voltageSwitchLimit = rawSwitchLimit * (5000 / 1024);
@@ -27,28 +31,36 @@ void setRead() {
 }
 
 void setup() {
+  // debug
   Serial.begin(9600);
 
   // sd
   SD.begin(53);
+
+  // switches
+  buttonSet.begin();
 }
 
 void loop() {
-  setRead();
+  inputMenu();
 
   if (buttonSet.pressed()) {
     SD.remove("high1.txt");
-    myFile = SD.open("high1.txt", FILE_WRITE);
-    if (myFile) {
-      Serial.print("Writing to high1.txt...");
-      myFile.println(unitSwitchLimit);
-      // close the file:
-      myFile.close();
-      Serial.println("done.");
-    }
-    else {
-      // if the file didn't open, print an error:
-      Serial.println("error opening high1.txt");
+    File sdLowIn1 = SD.open("high1.txt", FILE_WRITE);
+    if (sdLowIn1) {
+      sdLowIn1.println(unitSwitchLimit);
+      Serial.print("value "); Serial.print(unitSwitchLimit); Serial.println(" writen in high1.txt");
+      sdLowIn1.close();
     }
   }
+  else {
+    File sdLowOut1 = SD.open("high1.txt");
+    if (sdLowOut1) {
+      //Serial.println(sdLowOut1.parseInt());
+      LimitLow1 = sdLowOut1.parseInt();
+      sdLowOut1.close();
+
+    }
+  }
+  Serial.println(LimitLow1);
 }

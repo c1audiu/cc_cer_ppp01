@@ -1,3 +1,24 @@
+/*
+triggerFlag = 1; // trigger on, settling time passed, the limits can be monitored
+triggerFlag = 2; // trigger on, to early to start the limits monitor
+
+flowFlag = 1; // flow limit ok
+flowFlag = 2; // flow limit nok
+
+pressureFlag = 1; // pressure limits ok
+pressureFlag = 2; // pressure limits nok
+
+monitFlag = 1; // trigger on, flow limit ok, pressure ok
+monitFlag = 2; // trigger on, flow limit ok, pressure nok
+monitFlag = 3; // trigger on, flow nok
+monitFlag = 4; // trigger off
+
+relayFlag = 1; // relay on
+relayFlag = 2; // relay off
+
+errorFlag = 1; // flag to stop and wait if error occurs
+*/
+
 // lcd
 #include <Wire.h>
 #include <DFRobot_RGBLCD.h>
@@ -9,7 +30,7 @@ const int pinSwitchSet = 41; // push switch for setting the pressure limits
 Button buttonSet = (pinSwitchSet);
 
 const int pinSwitchMonitor = 42; // push switch for changing between monitor on (read, compare with limits and to the logic) and monitor off (just read the values)
-bool buttonMonitor = 0;
+int buttonMonitor = 0;
 
 const int pinSwitchMenu = A6; // rotary switch for menu navigation
 int rawSwitchMenu = 0; // raw reading
@@ -52,74 +73,12 @@ int pressureFlag = 0;
 int triggerFlag = 0;
 int flowFlag = 0;
 int monitFlag = 0;
-int statusFlag = 0;
+int relayFlag = 0;
 int errorFlag = 0;
 unsigned long startMillis = millis(); // used for calculating the skip time for pressure monit
 unsigned long currentMillis = 0; // used for calculating the skip time for pressure monit
 unsigned long triggerMillis = 0; // used for calculating the skip time for pressure monit
 const unsigned long skipMillis = 2000; // skip time for pressure monit
-
-void flowRead() {
-  // flow meter UF25B 1
-  rawFlowSensor1 = analogRead(pinFlowSensor1);
-  voltageFlowSensor1 = rawFlowSensor1 * (5000 / 1024.0);
-  if (voltageFlowSensor1 >= 200) {
-    unitFlowSensor1 = (voltageFlowSensor1 - 200) / 200; // calculated value -> 200mV offset; 200mV = 1L/min
-  }
-  else {
-    unitFlowSensor1 = 0;
-  }
-}
-
-void flowMonit() {
-  flowRead();
-
-  // flow meter UF25B 1
-  if (unitFlowSensor1 <= limitFlow) {
-    flowFlag = 1; // flow limit ok
-  }
-  else {
-    flowFlag = 2; // flow limit nok
-  }
-}
-
-void pressureRead() {
-  // pressure transmitter XMEP250BT11F 1
-  rawPressureSensor1 = analogRead(pinPressureSensor1);
-  voltagePressureSensor1 = rawPressureSensor1 * (5000 / 1024.0);
-  if (voltagePressureSensor1 >= 500) {
-    unitPressureSensor1 = (voltagePressureSensor1 - 500) / 16; // calculated value -> 500mV offset; 16mV = 1BAR
-  }
-  else {
-    unitPressureSensor1 = 0;
-  }
-}
-
-void pressureLimit() {
-  lcdMenu();
-  pressureRead();
-  if (limitLV <= round(unitPressureSensor1) && round(unitPressureSensor1) <= limitHV) {
-    pressureFlag = 1; // pressure limits ok
-  }
-  else {
-    pressureFlag = 2; // pressure limits nok
-  }
-}
-
-void pressureMonit() {
-  pressureLimit();
-  triggerMonit();
-  
-  if (triggerFlag == 1 && pressureFlag == 1) {
-    monitFlag = 1; // trigger on; the limits can be monitored; limits ok
-  }
-  else if (triggerFlag == 1 && pressureFlag == 2) {
-    monitFlag = 2; // trigger on; the limits can be monitored; limits nok
-  }
-  else {
-    monitFlag = 3; // monitor off or/and trigger off
-  }
-}
 
 void triggerRead() {
   // voltage divider 1
@@ -134,7 +93,7 @@ void triggerMonit() {
     currentMillis = millis();
     triggerMillis = currentMillis - startMillis;
     if (triggerMillis >= skipMillis) {
-      triggerFlag = 1; // trigger on, the limits can be monitored
+      triggerFlag = 1; // trigger on, settling time passed, the limits can be monitored
     }
     else {
       triggerFlag = 2; // trigger on, to early to start the limits monitor
@@ -146,33 +105,102 @@ void triggerMonit() {
   }
 }
 
-void statusMonit() {
-  flowMonit();
-  pressureMonit();
-
-  if (!buttonMonitor) { // monitor ON
-    if (monitFlag == 1 && flowFlag == 1) {
-      statusFlag = 1;   // Turn on relay
-    }
-    else if (monitFlag == 3 && flowFlag == 1) {
-      statusFlag = 2;    // Turn on relay
-    }
-    else {
-      statusFlag = 3;   // Turn off relay
-    }
+void flowRead1() {
+  // flow meter UF25B 1
+  rawFlowSensor1 = analogRead(pinFlowSensor1);
+  voltageFlowSensor1 = rawFlowSensor1 * (5000 / 1024.0);
+  if (voltageFlowSensor1 >= 200) {
+    unitFlowSensor1 = (voltageFlowSensor1 - 200) / 200; // calculated value -> 200mV offset; 200mV = 1L/min
   }
-  else { // monitor OFF
-    statusFlag = 4;    // Turn on relay
+  else {
+    unitFlowSensor1 = 0;
   }
 }
 
-void errorMonit() {
-  statusMonit();
+void flowMonit() {
+  flowRead1();
 
-  if (statusFlag == 3) { 
+  // flow meter UF25B 1
+  if (unitFlowSensor1 <= limitFlow) {
+    flowFlag = 1; // flow limit ok
+  }
+  else {
+    flowFlag = 2; // flow limit nok
+  }
+}
+
+void pressureRead1() {
+  // pressure transmitter XMEP250BT11F 1
+  rawPressureSensor1 = analogRead(pinPressureSensor1);
+  voltagePressureSensor1 = rawPressureSensor1 * (5000 / 1024.0);
+  if (voltagePressureSensor1 >= 500) {
+    unitPressureSensor1 = (voltagePressureSensor1 - 500) / 16; // calculated value -> 500mV offset; 16mV = 1BAR
+  }
+  else {
+    unitPressureSensor1 = 0;
+  }
+}
+
+void pressureLimit() {
+  lcdMenu();
+  pressureRead1();
+  if (limitLV <= round(unitPressureSensor1) && round(unitPressureSensor1) <= limitHV) {
+    pressureFlag = 1; // pressure limits ok
+  }
+  else {
+    pressureFlag = 2; // pressure limits nok
+  }
+}
+
+void pressureMonit() {
+  triggerMonit();
+  flowMonit();
+  pressureLimit();
+
+  if (triggerFlag == 1) { // trigger on, settling time passed, the limits can be monitored
+    if (flowFlag == 1) {
+      if  (pressureFlag == 1) {
+        monitFlag = 1; // trigger on, flow limit ok, pressure ok
+      }
+      else {
+        monitFlag = 2; // trigger on, flow limit ok, pressure nok
+      }
+    }
+    else {
+      monitFlag = 3; // trigger on, flow nok
+    }
+  }
+  else {
+    monitFlag = 4; // trigger off
+  }
+}
+
+
+void relayMonit() {
+  inputMenu();
+  flowMonit();
+  pressureMonit();
+
+  if (buttonMonitor == 0) { // monitor button is on
+    if (monitFlag == 1 || monitFlag == 4) {
+      relayFlag = 1 ; // relay on
+    }
+    else { // limits nok
+      relayFlag = 2; // relay off
+    }
+  }
+  else { // monitor button is off
+    relayFlag = 1; // relay on
+  }
+}
+
+void errorMonit() { // function to block the relay if flow or pressure is nok
+  relayMonit();
+
+  if (relayFlag == 2) {
     errorFlag = 1; // flag to stop the monitor if error occurs
   }
-  else if (errorFlag == 1 && buttonMonitor) { // reset error flag with monitor switch
+  else if (errorFlag == 1 && buttonMonitor == 1) { // reset error flag with monitor switch off
     errorFlag = 0;
   }
 }
@@ -198,8 +226,8 @@ void inputMenu() {
 
 void lcdMenu() {
   inputMenu();
-  flowRead();
-  pressureRead();
+  flowRead1();
+  pressureRead1();
 
   // i2c lcd
   lcd.setRGB(255, 255, 255);
@@ -285,7 +313,7 @@ void lcdMenu() {
     default: // show monitor state and status code
       lcd.setCursor(0, 0);
       lcd.print("Monitor  ->");
-      if (buttonMonitor) {
+      if (buttonMonitor == 1) {
         lcd.setCursor(13, 0);
         lcd.print("Off");
       }
@@ -310,6 +338,7 @@ void setup() {
 
   // switches
   buttonSet.begin();
+  pinMode(pinSwitchMonitor, INPUT);
 
   // relays
   pinMode(pinRelayWater1, OUTPUT);
@@ -319,8 +348,9 @@ void setup() {
 void loop() {
   lcdMenu();
   errorMonit();
+  //flowMonit();
 
-  if (errorFlag != 1) {
+  if (errorFlag == 0) {
     digitalWrite(pinRelayWater1, HIGH);   // switch on relay
     digitalWrite(pinRelayPower1, HIGH);
   }
@@ -332,8 +362,11 @@ void loop() {
   // debug
   //Serial.print(unitFlowSensor1); Serial.print(">="); Serial.println(limitFlow);
   //Serial.print(limitLV); Serial.print("<="); Serial.print(round(unitPressureSensor1)); Serial.print("<="); Serial.println(limitHV);
-  //Serial.println(pressureFlag);
-  //Serial.println(flowFlag);
-  //Serial.println(monitFlag);
-  //Serial.println(errorFlag);
+  //Serial.print("triggerFlag == "); Serial.println(triggerFlag);
+  Serial.print("buttonMonitor == "); Serial.println(buttonMonitor);
+  //Serial.print("pressureFlag == "); Serial.println(pressureFlag);
+  //Serial.print("flowFlag == "); Serial.println(flowFlag);
+  Serial.print("monitFlag == "); Serial.println(monitFlag);
+  Serial.print("errorFlag == "); Serial.println(errorFlag);
+  Serial.print("relayFlag == "); Serial.println(triggerFlag);
 }
