@@ -6,7 +6,7 @@
 #include <SD.h>
 File sdLowIn1;
 File sdLowOut1;
-int LimitLow1 = 0;
+int limitLow1 = 0;
 
 // switches
 #include <Button.h>
@@ -43,24 +43,21 @@ void setup() {
 
 void loop() {
   inputMenu();
-
-  if (buttonSet.pressed()) {
-    SD.remove("high1.txt");
-    File sdLowIn1 = SD.open("high1.txt", FILE_WRITE);
+  if (buttonSet.pressed()) { // write the lower limit on the sd card
+    SD.remove("low1.txt");
+    File sdLowIn1 = SD.open("low1.txt", FILE_WRITE);
     if (sdLowIn1) {
       sdLowIn1.println(unitSwitchLimit);
-      Serial.print("value "); Serial.print(unitSwitchLimit); Serial.println(" writen in high1.txt");
       sdLowIn1.close();
     }
   }
-  else {
-    File sdLowOut1 = SD.open("high1.txt");
-    if (sdLowOut1) {
-      //Serial.println(sdLowOut1.parseInt());
-      LimitLow1 = sdLowOut1.parseInt();
-      sdLowOut1.close();
 
+  else {
+    File sdLowOut1 = SD.open("low1.txt");
+    if (sdLowOut1) {
+      limitLow1 = sdLowOut1.parseInt();
+      sdLowOut1.close();
     }
   }
-  Serial.println(LimitLow1);
+  Serial.println(limitLow1);
 }

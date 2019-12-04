@@ -1,6 +1,6 @@
 /*
   Flag explaination
-  
+
   triggerFlag = 1; // trigger on, settling time passed, the limits can be monitored
   triggerFlag = 2; // trigger on, to early to start the limits monitor
 
@@ -29,8 +29,10 @@ DFRobot_RGBLCD lcd(16, 2);
 // sd
 #include <SPI.h>
 #include <SD.h>
-File sdLimitLow1;
-File sdLimitHigh1;
+File sdLowIn1;
+File sdLowOut1;
+File sdHighIn1;
+File sdHighOut1;
 
 // switches
 #include <Button.h>
@@ -87,6 +89,8 @@ unsigned long startMillis = millis(); // used for calculating the skip time for 
 unsigned long currentMillis = 0; // used for calculating the skip time for pressure monit
 unsigned long triggerMillis = 0; // used for calculating the skip time for pressure monit
 const unsigned long skipMillis = 2000; // skip time for pressure monit
+
+
 
 void triggerRead() {
   // voltage divider 1
@@ -188,7 +192,7 @@ void relayMonit() {
   flowMonit();
   pressureMonit();
 
-  if (buttonMonitor == 0) { // monitor button is on
+  if (buttonMonitor == 0) { // monitor button is pressed
     if (monitFlag == 1 || monitFlag == 4) {
       relayFlag = 1 ; // relay on
     }
@@ -196,7 +200,7 @@ void relayMonit() {
       relayFlag = 2; // relay off
     }
   }
-  else { // monitor button is off
+  else { // monitor button is released
     relayFlag = 1; // relay on
   }
 }
@@ -212,12 +216,28 @@ void errorMonit() { // function to block the relay if flow or pressure is nok
   }
 }
 
+void readLimit() { // read data from sd and store it in a variable
+
+  File sdLowOut1 = SD.open("low1.txt");
+  if (sdLowOut1) {
+    limitLow = sdLowOut1.parseInt();
+    sdLowOut1.close();
+  }
+
+  File sdHighOut1 = SD.open("high1.txt");
+  if (sdHighOut1) {
+    limitHigh = sdHighOut1.parseInt();
+    sdHighOut1.close();
+  }
+
+}
+
 void inputMenu() {
-  // rotary switch for Menu selection
+  // rotary switch for menu navigation
   rawSwitchMenu = analogRead(pinSwitchMenu);
   menuSelection = rawSwitchMenu / 204.8; // 1024/5 menu items
 
-  // rotary switch for setting the pressure limits
+  // rotary switch for setting the limits
   rawSwitchLimit = analogRead(pinSwitchLimit);
   voltageSwitchLimit = rawSwitchLimit * (5000 / 1024);
   if (voltageSwitchLimit >= 500) {
@@ -227,7 +247,7 @@ void inputMenu() {
     unitSwitchLimit = 0;
   }
 
-  // push button 2
+  // push button for monitor toggle
   buttonMonitor = digitalRead(pinSwitchMonitor);
 }
 
@@ -235,6 +255,7 @@ void lcdMenu() {
   inputMenu();
   flowRead1();
   pressureRead1();
+  readLimit();
 
   // i2c lcd
   lcd.setRGB(255, 255, 255);
@@ -283,24 +304,23 @@ void lcdMenu() {
       // refresh display
       currentReadingDisplay = rawSwitchLimit;
       if (previousReadingDisplay - currentReadingDisplay >= 2) {
+        
         lcd.clear();
       }
       lcd.setCursor(0, 0);
       lcd.print("Limit LV");
       lcd.setCursor(10, 0);
       lcd.print(limitLow);
-      if (buttonSet.pressed()) {
-        if (SD.exists("limitLow1.txt")) {
-          SD.remove("limitLow1.txt");
-        }
-        else {
-          sdLimitLow1 = SD.open("limitLow1.txt", FILE_WRITE);
-          if (sdLimitLow1) {
-            sdLimitLow1.println(unitSwitchLimit);
-            sdLimitLow1.close();
-          }
+
+      if (buttonSet.pressed()) { // write the lower limit on the sd card
+        SD.remove("low1.txt");
+        File sdLowIn1 = SD.open("low1.txt", FILE_WRITE);
+        if (sdLowIn1) {
+          sdLowIn1.println(unitSwitchLimit);
+          sdLowIn1.close();
         }
       }
+
       lcd.setCursor(0, 1);
       lcd.print("New Limit");
       lcd.setCursor(10, 1);
@@ -317,18 +337,16 @@ void lcdMenu() {
       lcd.print("Limit HV");
       lcd.setCursor(10, 0);
       lcd.print(limitHigh);
-      if (buttonSet.pressed()) {
-        if (SD.exists("limitHigh1.txt")) {
-          SD.remove("limitHigh1.txt");
-        }
-        else {
-          sdLimitHigh1 = SD.open("limitHigh1.txt", FILE_WRITE);
-          if (sdLimitHigh1) {
-            sdLimitHigh1.println(unitSwitchLimit);
-            sdLimitHigh1.close();
-          }
+
+      if (buttonSet.pressed()) { // write the higher limit on the sd card
+        SD.remove("high1.txt");
+        File sdHighIn1 = SD.open("high1.txt", FILE_WRITE);
+        if (sdHighIn1) {
+          sdHighIn1.println(unitSwitchLimit);
+          sdHighIn1.close();
         }
       }
+
       lcd.setCursor(0, 1);
       lcd.print("New Limit");
       lcd.setCursor(10, 1);
