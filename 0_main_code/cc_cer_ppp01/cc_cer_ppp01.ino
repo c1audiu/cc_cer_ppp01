@@ -21,6 +21,8 @@
   errorFlag = 1; // flag to stop and wait if error occurs
 */
 
+
+
 // lcd
 #include <Wire.h>
 #include <DFRobot_RGBLCD.h>
@@ -75,8 +77,8 @@ int currentMenuSelection = 0; // used for lcd refresh
 int previousMenuSelection = 0; // used for lcd refresh
 int currentReadingDisplay = 0; // used for lcd refresh
 int previousReadingDisplay = 0; // used for lcd refresh
-int limitHigh = 0; // higher limit for pressure
-int limitLow = 0; // lower limit for pressure
+int limitHigh1 = 0; // higher limit for pressure
+int limitLow1 = 0; // lower limit for pressure
 int limitVoltage = 3; // limit for voltage received from timed relay
 float limitFlow = 0.0; // limit for water flow
 int pressureFlag = 0;
@@ -89,8 +91,6 @@ unsigned long startMillis = millis(); // used for calculating the skip time for 
 unsigned long currentMillis = 0; // used for calculating the skip time for pressure monit
 unsigned long triggerMillis = 0; // used for calculating the skip time for pressure monit
 const unsigned long skipMillis = 2000; // skip time for pressure monit
-
-
 
 void triggerRead() {
   // voltage divider 1
@@ -156,7 +156,7 @@ void pressureRead1() {
 void pressureLimit() {
   lcdMenu();
   pressureRead1();
-  if (limitLow <= round(unitPressureSensor1) && round(unitPressureSensor1) <= limitHigh) {
+  if (limitLow1 <= round(unitPressureSensor1) && round(unitPressureSensor1) <= limitHigh1) {
     pressureFlag = 1; // pressure limits ok
   }
   else {
@@ -220,13 +220,13 @@ void readLimit() { // read data from sd and store it in a variable
 
   File sdLowOut1 = SD.open("low1.txt");
   if (sdLowOut1) {
-    limitLow = sdLowOut1.parseInt();
+    limitLow1 = sdLowOut1.parseInt();
     sdLowOut1.close();
   }
 
   File sdHighOut1 = SD.open("high1.txt");
   if (sdHighOut1) {
-    limitHigh = sdHighOut1.parseInt();
+    limitHigh1 = sdHighOut1.parseInt();
     sdHighOut1.close();
   }
 
@@ -310,7 +310,7 @@ void lcdMenu() {
       lcd.setCursor(0, 0);
       lcd.print("Limit LV");
       lcd.setCursor(10, 0);
-      lcd.print(limitLow);
+      lcd.print(limitLow1);
 
       if (buttonSet.pressed()) { // write the lower limit on the sd card
         SD.remove("low1.txt");
@@ -336,7 +336,7 @@ void lcdMenu() {
       lcd.setCursor(0, 0);
       lcd.print("Limit HV");
       lcd.setCursor(10, 0);
-      lcd.print(limitHigh);
+      lcd.print(limitHigh1);
 
       if (buttonSet.pressed()) { // write the higher limit on the sd card
         SD.remove("high1.txt");
@@ -406,7 +406,7 @@ void loop() {
 
   // debug
   //Serial.print(unitFlowSensor1); Serial.print(">="); Serial.println(limitFlow);
-  //Serial.print(limitLow); Serial.print("<="); Serial.print(round(unitPressureSensor1)); Serial.print("<="); Serial.println(limitHigh);
+  //Serial.print(limitLow1); Serial.print("<="); Serial.print(round(unitPressureSensor1)); Serial.print("<="); Serial.println(limitHigh1);
   //Serial.print("triggerFlag == "); Serial.println(triggerFlag);
   //Serial.print("buttonMonitor == "); Serial.println(buttonMonitor);
   //Serial.print("pressureFlag == "); Serial.println(pressureFlag);
